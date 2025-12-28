@@ -1,0 +1,251 @@
+# NeuralStockTrader Configuration
+system:
+  name: "Neural Stock Trader"
+  version: "1.0.0"
+  environment: "development"  # development, backtesting, paper_trading, live_trading
+
+# Data Configuration
+data:
+  symbols: ["AAPL", "MSFT", "GOOGL", "TSLA"]
+  timeframe: "1h"  # 1m, 5m, 15m, 1h, 4h, 1d
+  history_days: 365
+  refresh_interval: 300  # seconds
+  data_sources:
+    - type: "yfinance"
+      enabled: true
+    - type: "alpaca"
+      enabled: false
+    - type: "iex_cloud"
+      enabled: false
+
+# Neural Network Configuration
+neural_network:
+  architecture: "lstm"  # lstm, gru, transformer, ensemble
+  lstm:
+    input_size: 50  # number of features
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+    output_size: 1
+    seq_length: 60  # lookback window
+  
+  gru:
+    input_size: 50
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    output_size: 1
+    seq_length: 60
+  
+  transformer:
+    d_model: 64
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 256
+    dropout: 0.1
+    seq_length: 60
+
+  training:
+    epochs: 100
+    batch_size: 32
+    learning_rate: 0.001
+    optimizer: "adam"  # adam, sgd, rmsprop
+    loss_function: "mse"  # mse, mae, huber
+    validation_split: 0.2
+    early_stopping: true
+    patience: 10
+
+# Reinforcement Learning Configuration
+reinforcement_learning:
+  enabled: true
+  algorithm: "ppo"  # dqn, ppo, a3c
+  gamma: 0.99  # discount factor
+  learning_rate: 0.001
+  entropy_coeff: 0.01
+  policy_clip: 0.2
+  epochs_per_update: 3
+  batch_size: 64
+
+# Game Theory Configuration
+game_theory:
+  enabled: true
+  market_model: "oligopoly"  # perfect_competition, monopoly, oligopoly
+  nash_equilibrium:
+    enabled: true
+    convergence_threshold: 0.001
+  opponent_modeling:
+    enabled: true
+    window_size: 100
+  auction_theory:
+    enabled: true
+    order_types: ["market", "limit", "vwap"]
+  signaling_games:
+    enabled: true
+
+# Quantitative Algorithms
+quant_algorithms:
+  mean_reversion:
+    enabled: true
+    window: 20
+    threshold: 2.0  # std deviations
+  
+  momentum:
+    enabled: true
+    short_window: 12
+    long_window: 26
+    threshold: 0.02
+  
+  statistical_arbitrage:
+    enabled: true
+    pair_correlation_min: 0.7
+    hedge_ratio_method: "ols"
+  
+  market_making:
+    enabled: true
+    spread_percentage: 0.001
+    inventory_limit: 100
+  
+  pairs_trading:
+    enabled: true
+    look_back: 60
+    entry_threshold: 2.0
+    exit_threshold: 0.5
+  
+  portfolio_optimization:
+    enabled: true
+    method: "markowitz"  # markowitz, black_litterman, risk_parity
+    risk_free_rate: 0.02
+
+# Risk Management
+risk_management:
+  max_position_size: 0.1  # 10% of portfolio
+  max_daily_loss: 0.05  # 5% of portfolio
+  max_drawdown: 0.20  # 20% max drawdown
+  position_sizing: "kelly"  # fixed, proportional, kelly, risk_parity
+  
+  kelly_criterion:
+    enabled: true
+    fraction: 0.25  # use 25% of kelly formula
+  
+  stop_loss:
+    enabled: true
+    percentage: 0.02  # 2% stop loss
+    type: "hard"  # hard, trailing, dynamic
+  
+  take_profit:
+    enabled: true
+    percentage: 0.05  # 5% take profit
+  
+  correlation_limit: 0.7  # max correlation between positions
+  circuit_breaker:
+    enabled: true
+    daily_loss_trigger: 0.03
+    intraday_loss_trigger: 0.02
+
+# Backtesting Configuration
+backtesting:
+  start_date: "2022-01-01"
+  end_date: "2024-01-01"
+  initial_capital: 100000
+  commission: 0.001  # 0.1%
+  slippage: 0.0005  # 0.05%
+  benchmark: "SPY"
+  rebalance_frequency: "monthly"  # daily, weekly, monthly, quarterly
+
+# Learning and Improvement
+learning:
+  continuous_learning: true
+  update_frequency: "daily"  # hourly, daily, weekly
+  ab_testing:
+    enabled: true
+    control_pct: 0.5
+    variant_pct: 0.5
+  
+  meta_learning:
+    enabled: true
+    regime_detection: true
+    strategy_selector: true
+  
+  hyperparameter_optimization:
+    enabled: true
+    method: "bayesian"  # grid_search, random_search, bayesian, genetic
+    max_iterations: 50
+
+# Monitoring and Logging
+monitoring:
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_file: "logs/trading.log"
+  metrics_tracking: true
+  dashboard_enabled: true
+  
+  metrics:
+    - "sharpe_ratio"
+    - "sortino_ratio"
+    - "calmar_ratio"
+    - "max_drawdown"
+    - "win_rate"
+    - "profit_factor"
+    - "return"
+    - "volatility"
+
+# API Configuration (for live/paper trading)
+api:
+  broker: "alpaca"  # alpaca, interactive_brokers, polygon
+  
+  alpaca:
+    api_key: "${ALPACA_API_KEY}"
+    secret_key: "${ALPACA_SECRET_KEY}"
+    base_url: "https://paper-api.alpaca.markets"
+    websocket_url: "wss://data.alpaca.markets/v1beta3/crypto"
+  
+  polygon:
+    api_key: "${POLYGON_API_KEY}"
+    base_url: "https://api.polygon.io"
+  
+  iex_cloud:
+    token: "${IEX_CLOUD_TOKEN}"
+
+# Feature Engineering
+features:
+  technical_indicators:
+    - "rsi"      # Relative Strength Index
+    - "macd"     # Moving Average Convergence Divergence
+    - "bollinger_bands"
+    - "atr"      # Average True Range
+    - "adx"      # Average Directional Index
+    - "stochastic"
+    - "vpt"      # Volume Price Trend
+    - "obv"      # On Balance Volume
+    - "ema"      # Exponential Moving Average
+    - "sma"      # Simple Moving Average
+  
+  price_features:
+    - "returns"
+    - "log_returns"
+    - "high_low_ratio"
+    - "close_open_ratio"
+    - "volume_weighted_price"
+  
+  sentiment_features:
+    enabled: false
+    sources:
+      - "newsapi"
+      - "twitter"
+      - "reddit"
+  
+  fundamental_features:
+    enabled: false
+    metrics:
+      - "pe_ratio"
+      - "pb_ratio"
+      - "dividend_yield"
+      - "earnings_growth"
+
+# Output and Results
+output:
+  results_dir: "results"
+  save_models: true
+  model_dir: "models"
+  plots_dir: "plots"
+  save_trades: true
+  trades_file: "trades.csv"

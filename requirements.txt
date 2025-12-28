@@ -1,0 +1,11 @@
+torch==2.1.1
+numpy==1.24.3
+pandas==2.0.3
+scikit-learn==1.3.0
+yfinance==0.2.32
+pyyaml==6.0.1
+matplotlib==3.7.2
+seaborn==0.12.2
+ta-lib==0.4.28
+alpaca-trade-api==3.1.0
+polygon-io==1.14.1

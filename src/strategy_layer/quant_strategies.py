@@ -283,6 +283,377 @@ class PortfolioOptimizationStrategy(TradingStrategy):
             self.target_volatility = params['target_volatility']
 
 
+class VolumeWeightedStrategy(TradingStrategy):
+    """Volume-weighted momentum strategy"""
+    
+    def __init__(self, window: int = 20, volume_threshold: float = 1.5):
+        """
+        Args:
+            window: Rolling window for price momentum
+            volume_threshold: Volume multiplier threshold for confirmation
+        """
+        self.window = window
+        self.volume_threshold = volume_threshold
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate volume-weighted signals"""
+        # Calculate momentum
+        momentum = data['close'].pct_change(self.window)
+        
+        # Calculate average volume
+        avg_volume = data['volume'].rolling(window=self.window).mean()
+        volume_ratio = data['volume'] / avg_volume
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # Buy signal: positive momentum + high volume
+        buy_signal = (momentum > 0) & (volume_ratio > self.volume_threshold)
+        signals[buy_signal] = SignalType.BUY.value
+        
+        # Sell signal: negative momentum + high volume
+        sell_signal = (momentum < 0) & (volume_ratio > self.volume_threshold)
+        signals[sell_signal] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'window': self.window, 'volume_threshold': self.volume_threshold}
+    
+    def set_parameters(self, params: dict):
+        self.window = params.get('window', self.window)
+        self.volume_threshold = params.get('volume_threshold', self.volume_threshold)
+
+
+class VolatilityAdaptiveStrategy(TradingStrategy):
+    """Volatility-adaptive trading strategy that adjusts based on market regime"""
+    
+    def __init__(self, window: int = 20, volatility_percentile: float = 0.7):
+        """
+        Args:
+            window: Rolling window for volatility calculation
+            volatility_percentile: Percentile for volatility regime detection
+        """
+        self.window = window
+        self.volatility_percentile = volatility_percentile
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate volatility-adapted signals"""
+        # Calculate returns and volatility
+        returns = data['close'].pct_change()
+        volatility = returns.rolling(window=self.window).std()
+        
+        # Calculate volatility regime
+        volatility_threshold = volatility.quantile(self.volatility_percentile)
+        high_volatility = volatility > volatility_threshold
+        
+        # Calculate RSI for overbought/oversold
+        delta = data['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / (loss + 1e-10)
+        rsi = 100 - (100 / (1 + rs))
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # In high volatility: stricter RSI thresholds
+        if high_volatility.iloc[-1]:
+            buy_threshold, sell_threshold = 30, 70
+        else:
+            buy_threshold, sell_threshold = 35, 65
+        
+        signals[(rsi < buy_threshold) & (high_volatility)] = SignalType.BUY.value
+        signals[(rsi > sell_threshold) & (high_volatility)] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'window': self.window, 'volatility_percentile': self.volatility_percentile}
+    
+    def set_parameters(self, params: dict):
+        self.window = params.get('window', self.window)
+        self.volatility_percentile = params.get('volatility_percentile', self.volatility_percentile)
+
+
+class PairsTradeStrategy(TradingStrategy):
+    """Pairs trading strategy using correlation and mean reversion"""
+    
+    def __init__(self, window: int = 60, zscore_threshold: float = 2.0):
+        """
+        Args:
+            window: Lookback window for correlation
+            zscore_threshold: Z-score threshold for trading
+        """
+        self.window = window
+        self.zscore_threshold = zscore_threshold
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate pairs trading signals"""
+        signals = pd.Series(0, index=data.index)
+        
+        if len(data) < self.window:
+            return signals
+        
+        # Calculate rolling correlation with a reference index (using highest correlated nearby price)
+        returns = data['close'].pct_change()
+        
+        # Simple implementation: trade based on deviations from SMA
+        sma = data['close'].rolling(window=self.window).mean()
+        std = data['close'].rolling(window=self.window).std()
+        
+        zscore = (data['close'] - sma) / (std + 1e-10)
+        
+        # Buy when price is below mean (mean reversion)
+        signals[zscore < -self.zscore_threshold] = SignalType.BUY.value
+        
+        # Sell when price is above mean
+        signals[zscore > self.zscore_threshold] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'window': self.window, 'zscore_threshold': self.zscore_threshold}
+    
+    def set_parameters(self, params: dict):
+        self.window = params.get('window', self.window)
+        self.zscore_threshold = params.get('zscore_threshold', self.zscore_threshold)
+
+
+class MultiTimeframeStrategy(TradingStrategy):
+    """Multi-timeframe strategy combining short and long-term trends"""
+    
+    def __init__(self, short_window: int = 10, long_window: int = 50):
+        """
+        Args:
+            short_window: Short-term moving average window
+            long_window: Long-term moving average window
+        """
+        self.short_window = short_window
+        self.long_window = long_window
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate multi-timeframe signals"""
+        # Short-term trend
+        sma_short = data['close'].rolling(window=self.short_window).mean()
+        
+        # Long-term trend
+        sma_long = data['close'].rolling(window=self.long_window).mean()
+        
+        # Medium-term momentum
+        momentum = data['close'].pct_change(20)
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # Buy: price above long-term trend, short > long, positive momentum
+        buy_condition = (data['close'] > sma_long) & (sma_short > sma_long) & (momentum > 0.02)
+        signals[buy_condition] = SignalType.BUY.value
+        
+        # Sell: price below long-term trend, short < long, negative momentum
+        sell_condition = (data['close'] < sma_long) & (sma_short < sma_long) & (momentum < -0.02)
+        signals[sell_condition] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'short_window': self.short_window, 'long_window': self.long_window}
+    
+    def set_parameters(self, params: dict):
+        self.short_window = params.get('short_window', self.short_window)
+        self.long_window = params.get('long_window', self.long_window)
+
+
+class MACDDivergenceStrategy(TradingStrategy):
+    """MACD with divergence detection strategy"""
+    
+    def __init__(self, fast: int = 12, slow: int = 26, signal: int = 9):
+        """
+        Args:
+            fast: Fast EMA period
+            slow: Slow EMA period
+            signal: Signal line EMA period
+        """
+        self.fast = fast
+        self.slow = slow
+        self.signal = signal
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate MACD divergence signals"""
+        # Calculate MACD
+        ema_fast = data['close'].ewm(span=self.fast).mean()
+        ema_slow = data['close'].ewm(span=self.slow).mean()
+        macd = ema_fast - ema_slow
+        signal_line = macd.ewm(span=self.signal).mean()
+        histogram = macd - signal_line
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # Buy signal: MACD crosses above signal line
+        buy_signal = (histogram > 0) & (histogram.shift(1) <= 0)
+        signals[buy_signal] = SignalType.BUY.value
+        
+        # Sell signal: MACD crosses below signal line
+        sell_signal = (histogram < 0) & (histogram.shift(1) >= 0)
+        signals[sell_signal] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'fast': self.fast, 'slow': self.slow, 'signal': self.signal}
+    
+    def set_parameters(self, params: dict):
+        self.fast = params.get('fast', self.fast)
+        self.slow = params.get('slow', self.slow)
+        self.signal = params.get('signal', self.signal)
+
+
+class RSIWithConfirmationStrategy(TradingStrategy):
+    """RSI strategy with momentum confirmation"""
+    
+    def __init__(self, rsi_period: int = 14, overbought: float = 70, oversold: float = 30):
+        """
+        Args:
+            rsi_period: Period for RSI calculation
+            overbought: RSI overbought threshold
+            oversold: RSI oversold threshold
+        """
+        self.rsi_period = rsi_period
+        self.overbought = overbought
+        self.oversold = oversold
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate RSI signals with momentum confirmation"""
+        # Calculate RSI
+        delta = data['close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
+        rs = gain / (loss + 1e-10)
+        rsi = 100 - (100 / (1 + rs))
+        
+        # Momentum confirmation
+        momentum = data['close'].pct_change(5)
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # Buy: RSI oversold + positive momentum
+        buy_condition = (rsi < self.oversold) & (momentum > 0)
+        signals[buy_condition] = SignalType.BUY.value
+        
+        # Sell: RSI overbought + negative momentum
+        sell_condition = (rsi > self.overbought) & (momentum < 0)
+        signals[sell_condition] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'rsi_period': self.rsi_period, 'overbought': self.overbought, 'oversold': self.oversold}
+    
+    def set_parameters(self, params: dict):
+        self.rsi_period = params.get('rsi_period', self.rsi_period)
+        self.overbought = params.get('overbought', self.overbought)
+        self.oversold = params.get('oversold', self.oversold)
+
+
+class BollingerBandStrategy(TradingStrategy):
+    """Bollinger Bands squeeze and breakout strategy"""
+    
+    def __init__(self, window: int = 20, num_std: float = 2.0, squeeze_threshold: float = 0.3):
+        """
+        Args:
+            window: Moving average window
+            num_std: Number of standard deviations
+            squeeze_threshold: Threshold for band squeeze detection
+        """
+        self.window = window
+        self.num_std = num_std
+        self.squeeze_threshold = squeeze_threshold
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate Bollinger Bands signals"""
+        sma = data['close'].rolling(window=self.window).mean()
+        std = data['close'].rolling(window=self.window).std()
+        
+        upper_band = sma + (std * self.num_std)
+        lower_band = sma - (std * self.num_std)
+        
+        # Calculate band width
+        band_width = (upper_band - lower_band) / sma
+        band_width_sma = band_width.rolling(window=20).mean()
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # Buy: Price breaks above upper band during squeeze
+        buy_condition = (data['close'] > upper_band) & (band_width < band_width_sma * (1 + self.squeeze_threshold))
+        signals[buy_condition] = SignalType.BUY.value
+        
+        # Sell: Price breaks below lower band during squeeze
+        sell_condition = (data['close'] < lower_band) & (band_width < band_width_sma * (1 + self.squeeze_threshold))
+        signals[sell_condition] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'window': self.window, 'num_std': self.num_std, 'squeeze_threshold': self.squeeze_threshold}
+    
+    def set_parameters(self, params: dict):
+        self.window = params.get('window', self.window)
+        self.num_std = params.get('num_std', self.num_std)
+        self.squeeze_threshold = params.get('squeeze_threshold', self.squeeze_threshold)
+
+
+class TrendFollowingStrategy(TradingStrategy):
+    """Advanced trend following with ADX confirmation"""
+    
+    def __init__(self, trend_window: int = 20, adx_threshold: float = 25):
+        """
+        Args:
+            trend_window: Window for trend detection
+            adx_threshold: Minimum ADX for strong trend
+        """
+        self.trend_window = trend_window
+        self.adx_threshold = adx_threshold
+        
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate trend-following signals"""
+        # Calculate ADX (simplified)
+        high_low = data['high'] - data['low']
+        high_close = abs(data['high'] - data['close'].shift(1))
+        low_close = abs(data['low'] - data['close'].shift(1))
+        
+        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        atr = tr.rolling(window=14).mean()
+        
+        # Directional indicators (simplified)
+        up_move = data['high'].diff()
+        down_move = -data['low'].diff()
+        
+        plus_dm = up_move.where((up_move > down_move) & (up_move > 0), 0)
+        minus_dm = down_move.where((down_move > up_move) & (down_move > 0), 0)
+        
+        plus_di = 100 * (plus_dm.rolling(window=14).mean() / (atr + 1e-10))
+        minus_di = 100 * (minus_dm.rolling(window=14).mean() / (atr + 1e-10))
+        
+        di_diff = abs(plus_di - minus_di)
+        adx = di_diff.rolling(window=14).mean()
+        
+        signals = pd.Series(0, index=data.index)
+        
+        # Buy: Uptrend with strong ADX
+        buy_condition = (plus_di > minus_di) & (adx > self.adx_threshold)
+        signals[buy_condition] = SignalType.BUY.value
+        
+        # Sell: Downtrend with strong ADX
+        sell_condition = (minus_di > plus_di) & (adx > self.adx_threshold)
+        signals[sell_condition] = SignalType.SELL.value
+        
+        return signals
+    
+    def get_parameters(self) -> dict:
+        return {'trend_window': self.trend_window, 'adx_threshold': self.adx_threshold}
+    
+    def set_parameters(self, params: dict):
+        self.trend_window = params.get('trend_window', self.trend_window)
+        self.adx_threshold = params.get('adx_threshold', self.adx_threshold)
+
+
 class StrategyEnsemble:
     """Combine multiple strategies with voting mechanism"""
     
@@ -327,19 +698,44 @@ class StrategyEnsemble:
 
 
 if __name__ == "__main__":
-    # Example usage
+    # Example usage demonstrating all strategies
     from src.data_layer.data_manager import DataManager
     
     dm = DataManager()
     data = dm.fetch_historical_data("AAPL", "2023-01-01", "2024-01-01")
     data = dm.add_technical_indicators(data)
     
+    # Create comprehensive strategy ensemble with all algorithms
     strategies = [
         MeanReversionStrategy(window=20, threshold=2.0),
         MomentumStrategy(fast_period=12, slow_period=26),
-        StatisticalArbitrageStrategy(lookback=60)
+        StatisticalArbitrageStrategy(lookback=60),
+        VolumeWeightedStrategy(window=20, volume_threshold=1.5),
+        VolatilityAdaptiveStrategy(window=20, volatility_percentile=0.7),
+        PairsTradeStrategy(window=60, zscore_threshold=2.0),
+        MultiTimeframeStrategy(short_window=10, long_window=50),
+        MACDDivergenceStrategy(fast=12, slow=26, signal=9),
+        RSIWithConfirmationStrategy(rsi_period=14, overbought=70, oversold=30),
+        BollingerBandStrategy(window=20, num_std=2.0, squeeze_threshold=0.3),
+        TrendFollowingStrategy(trend_window=20, adx_threshold=25)
     ]
     
+    # Equal weights for all strategies
     ensemble = StrategyEnsemble(strategies)
+    
+    print("\n" + "="*80)
+    print("TRADING SIGNAL ANALYSIS - 11 ADVANCED STRATEGIES")
+    print("="*80)
+    
+    # Get ensemble signals
     signals = ensemble.generate_signals(data)
-    print(f"Signal distribution:\n{signals.value_counts()}")
+    print(f"\nEnsemble Signal Distribution:")
+    print(signals.value_counts())
+    
+    # Get individual strategy signals
+    strategy_signals = ensemble.get_strategy_signals(data)
+    print(f"\nIndividual Strategy Performance:")
+    for strategy_name, signals in strategy_signals.items():
+        buy_count = (signals == 1).sum()
+        sell_count = (signals == -1).sum()
+        print(f"  {strategy_name}: {buy_count} BUY signals, {sell_count} SELL signals")

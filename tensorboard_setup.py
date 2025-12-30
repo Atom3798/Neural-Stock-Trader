@@ -1,5 +1,5 @@
 """
-Tensorboard setup and model inspection
+Tensorboard setup & model inspection
 """
 
 import torch

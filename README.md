@@ -2,7 +2,7 @@
 
 A comprehensive, production-ready stock trading system combining neural networks, game theory, and quantitative finance algorithms with reinforcement learning and adaptive strategy selection.
 
-## 🎯 Project Overview
+##  Project Overview
 
 This system is designed to:
 - **Learn & Improve**: Deep learning models that continuously adapt to market conditions
@@ -11,7 +11,7 @@ This system is designed to:
 - **Manage Risk**: Sophisticated position sizing, portfolio optimization, and drawdown controls
 - **Validate Performance**: Comprehensive backtesting with realistic transaction costs and slippage
 
-## 📋 Architecture
+##  Architecture
 
 ```
 NeuralStockTrader/
@@ -52,7 +52,7 @@ NeuralStockTrader/
 └── requirements.txt             # Dependencies
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Installation
 
@@ -103,7 +103,7 @@ print(f"Max Drawdown: {metrics['max_drawdown_pct']:.2f}%")
 print(f"Win Rate: {metrics['win_rate_pct']:.2f}%")
 ```
 
-## 🧠 Core Components
+##  Core Components
 
 ### 1. Data Layer
 
@@ -222,7 +222,7 @@ Performance Metrics:
 - **Drawdown Metrics**: Max drawdown, recovery time
 - **Trade Metrics**: Win rate, profit factor, average win/loss
 
-## 📊 Configuration
+##  Configuration
 
 Edit `config/config.yaml` to customize:
 
@@ -256,7 +256,7 @@ backtesting:
   slippage: 0.0005
 ```
 
-## 🔄 Workflow
+##  Workflow
 
 ### Typical Trading Workflow
 
@@ -314,13 +314,13 @@ backtesting:
 **Win Rate** = Winning Trades / Total Trades
 - Combined with profit factor matters more than win rate alone
 
-## 🎯 Next Steps & Enhancement Ideas
+##  Next Steps & Enhancement Ideas
 
 ### Phase 1 (Current)
-- ✅ Core architecture with LSTM/GRU models
-- ✅ Quantitative strategy ensemble
-- ✅ Risk management framework
-- ✅ Backtesting engine
+-  Core architecture with LSTM/GRU models
+-  Quantitative strategy ensemble
+-  Risk management framework
+-  Backtesting engine
 
 ### Phase 2
 - [ ] Reinforcement Learning (DQN, PPO)
@@ -340,7 +340,7 @@ backtesting:
 - [ ] Optimal order execution
 - [ ] Market impact modeling
 
-## ⚠️ Important Notes
+##  Important Notes
 
 1. **Backtesting Disclaimer**: Past performance does not guarantee future results. Models trained on historical data may not generalize to new market regimes.
 
@@ -352,7 +352,7 @@ backtesting:
 
 5. **Walk-Forward Analysis**: Use out-of-sample testing to validate strategy robustness.
 
-## 📚 References
+##  References
 
 ### Game Theory
 - Nash Equilibrium for market modeling
@@ -376,11 +376,11 @@ backtesting:
 - Statistical arbitrage
 - Market microstructure
 
-## 📝 License
+##  License
 
 This project is for educational and research purposes.
 
-## 👥 Contributing
+##  Contributing
 
 Contributions welcome! Areas for improvement:
 - Additional neural network architectures
@@ -389,7 +389,7 @@ Contributions welcome! Areas for improvement:
 - Real broker API connections
 - Performance optimizations
 
-## 📧 Support
+##  Support
 
 For issues, questions, or suggestions, please create an issue in the repository.
 

@@ -79,7 +79,7 @@ def setup_tensorboard():
     print("""
     1. Open a terminal/PowerShell
     2. Navigate to your project directory:
-       cd "c:\\Users\\ompnd\\Desktop\\Projects\\NeuralStockTrader"
+       cd "<your-project-path>/NeuralStockTrader"
     
     3. Run Tensorboard:
        tensorboard --logdir=runs
